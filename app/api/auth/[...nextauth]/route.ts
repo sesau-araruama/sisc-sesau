@@ -19,9 +19,9 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  // ✅ ADICIONE ESTE BLOCO CRUCIAL PARA O REDIRECIONAMENTO
+  // ✅ Callback com tipos explícitos para parar o erro
   callbacks: {
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       // Redireciona para a dashboard após login bem-sucedido
       return `${baseUrl}/dashboard`
     }
