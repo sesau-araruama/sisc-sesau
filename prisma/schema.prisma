@@ -3,18 +3,28 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"  // 🔥 MUDADO de 'sqlite' para 'postgresql'
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String   // Hash da senha (NUNCA texto claro)
-  role      String   // "admin", "medico", "atendente"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String
+  password            String
+  role                String    // "admin", "medico", "atendente"
+  forcePasswordChange Boolean   @default(true)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relações
+  createdPatients     Patient[] @relation("PatientCreator")
+  updatedPatients     Patient[] @relation("PatientUpdater")
+  auditLogs           AuditLog[]
+
+  @@map("users")
 }
 
 model Patient {
@@ -29,8 +39,8 @@ model Patient {
   neighborhood String?
   city         String   @default("Araruama")
   zipCode      String?
-  susNumber    String?  @unique // Número do cartão SUS
-  medicalRecord String? // Prontuário médico
+  susNumber    String?  @unique
+  medicalRecord String?
   
   // Contatos de emergência
   emergencyContactName  String?
@@ -42,12 +52,41 @@ model Patient {
   medications    String?
   observations   String?
   
-  // Controle interno
+  // Controle interno e auditoria
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  createdBy      String?  // ID do usuário que cadastrou
+  createdById    String?
+  updatedById    String?
   
+  // Relações
+  createdBy      User?    @relation("PatientCreator", fields: [createdById], references: [id])
+  updatedBy      User?    @relation("PatientUpdater", fields: [updatedById], references: [id])
+
   @@index([name])
   @@index([cpf])
   @@index([susNumber])
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([updatedById])
+  @@map("patients")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userEmail String
+  action    String   // "LOGIN_SUCCESS", "LOGIN_FAILED", "PASSWORD_CHANGED", "PATIENT_CREATED", etc.
+  ipAddress String?
+  userAgent String?
+  details   String?  // Dados adicionais em JSON
+  timestamp DateTime @default(now())
+  
+  // Relação opcional com User
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userEmail])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
 }

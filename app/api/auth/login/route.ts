@@ -1,82 +1,127 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { createSession, logAudit } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
-
-    // 1. Validar entrada
+    
     if (!email || !password) {
       return NextResponse.json(
-        { message: 'Email e senha são obrigatórios' },
+        { error: 'Email e senha são obrigatórios' },
         { status: 400 }
       );
     }
-
-    // 2. Buscar usuário
+    
+    // Buscar usuário
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email }
     });
-
+    
+    const ipAddress = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    
+    // Se usuário não existe
     if (!user) {
-      // Não revelar se o usuário existe ou não
+      await logAudit('unknown', email, 'LOGIN_FAILED_USER_NOT_FOUND', 
+        { email }, ipAddress, userAgent);
+      
+      // Delay para prevenir timing attacks
+      await bcrypt.compare('dummy', '$2b$10$dummyhash');
+      
       return NextResponse.json(
-        { message: 'Credenciais inválidas' },
+        { error: 'Credenciais inválidas' },
         { status: 401 }
       );
     }
-
-    // 3. Verificar senha (comparar hash)
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    
+    // Verificar se conta está bloqueada
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      await logAudit(user.id, user.email, 'LOGIN_BLOCKED_ACCOUNT', 
+        { lockedUntil: user.lockedUntil }, ipAddress, userAgent);
+      
       return NextResponse.json(
-        { message: 'Credenciais inválidas' },
+        { 
+          error: `Conta bloqueada até ${user.lockedUntil.toLocaleString('pt-BR')}. 
+                  Tente novamente mais tarde.` 
+        },
+        { status: 423 }
+      );
+    }
+    
+    // Verificar senha
+    const isValid = await bcrypt.compare(password, user.password);
+    
+    if (!isValid) {
+      // Incrementar tentativas falhas
+      const newAttempts = user.failedLoginAttempts + 1;
+      let lockedUntil = null;
+      
+      // Bloquear após 5 tentativas falhas por 15 minutos
+      if (newAttempts >= 5) {
+        lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+      }
+      
+      await prisma.user.update({
+        where: { email },
+        data: {
+          failedLoginAttempts: newAttempts,
+          lockedUntil
+        }
+      });
+      
+      await logAudit(user.id, user.email, 'LOGIN_FAILED_INVALID_PASSWORD', 
+        { 
+          attemptNumber: newAttempts, 
+          locked: newAttempts >= 5,
+          lockedUntil 
+        }, 
+        ipAddress, userAgent);
+      
+      return NextResponse.json(
+        { 
+          error: `Senha incorreta. Tentativas restantes: ${5 - newAttempts}`,
+          attemptsLeft: 5 - newAttempts
+        },
         { status: 401 }
       );
     }
-
-    // 4. Criar sessão segura (sem JWT complexo)
-    // Vamos usar um cookie HTTP-only seguro
-    const sessionData = {
-      userId: user.id,
+    
+    // Login bem-sucedido - Resetar tentativas falhas
+    await prisma.user.update({
+      where: { email },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null
+      }
+    });
+    
+    // Criar sessão
+    const sessionUser = {
+      id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
+      forcePasswordChange: user.forcePasswordChange
     };
-
-    const response = NextResponse.json(
-      {
-        message: 'Login realizado com sucesso',
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+    
+    await createSession(sessionUser);
+    
+    return NextResponse.json(
+      { 
+        success: true, 
+        user: sessionUser,
+        requiresPasswordChange: user.forcePasswordChange
       },
       { status: 200 }
     );
-
-    // 5. Configurar cookie seguro
-    response.cookies.set({
-      name: 'sisc-session',
-      value: JSON.stringify(sessionData),
-      httpOnly: true, // IMPORTANTE: não acessível via JavaScript
-      secure: process.env.NODE_ENV === 'production', // HTTPS em produção
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24, // 24 horas
-      path: '/',
-    });
-
-    return response;
+    
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Erro no login:', error);
+    
     return NextResponse.json(
-      { message: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }
