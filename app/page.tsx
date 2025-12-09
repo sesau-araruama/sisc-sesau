@@ -1,173 +1,108 @@
-'use client' // 👈 Isso é ESSENCIAL: transforma o componente em "Client Component"
-
-import { useState, useEffect, FormEvent } from 'react'
-
-// Define a "forma" (tipo) de uma mensagem que vem da nossa API
-interface ChatMessage {
-  id: string
-  text: string
-  createdAt: string // A API envia como string, depois convertemos para Date se precisar
-}
-
 export default function Home() {
-  // 1. ESTADOS (VARIÁVEIS REATIVAS) DO COMPONENTE
-  const [messages, setMessages] = useState<ChatMessage[]>([]) // Lista de mensagens
-  const [newMessage, setNewMessage] = useState('') // Texto digitado no input
-  const [isLoading, setIsLoading] = useState(false) // Controla o "carregando..."
-  const [isSending, setIsSending] = useState(false) // Controla o "enviando..."
-
-  // 2. FUNÇÃO: Buscar o histórico de mensagens da nossa API
-  const fetchMessages = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/chat/messages') // Chama a rota GET
-      if (!response.ok) throw new Error('Falha ao carregar mensagens')
-      const data = await response.json()
-      setMessages(data) // Atualiza o estado com as mensagens recebidas
-    } catch (error) {
-      console.error('Erro ao buscar mensagens:', error)
-      alert('Não foi possível carregar o chat. Tente recarregar a página.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // 3. FUNÇÃO: Enviar uma nova mensagem para a nossa API
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault() // Impede o recarregamento padrão do formulário
-    if (!newMessage.trim() || isSending) return // Não envia se estiver vazio ou já enviando
-
-    const messageToSend = newMessage.trim()
-    setIsSending(true)
-
-    try {
-      const response = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: messageToSend }),
-      })
-
-      if (!response.ok) throw new Error('Falha ao enviar mensagem')
-
-      // Limpa o campo de input e busca as mensagens atualizadas
-      setNewMessage('')
-      await fetchMessages() // Recarrega a lista com a nova mensagem
-
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error)
-      alert('Erro ao enviar mensagem. Tente novamente.')
-    } finally {
-      setIsSending(false)
-    }
-  }
-
-  // 4. EFEITO: Buscar mensagens quando a página for carregada
-  useEffect(() => {
-    fetchMessages()
-  }, [])
-
-  // 5. RENDERIZAÇÃO DA INTERFACE
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Barra superior (inalterada) */}
+      {/* Barra superior simplificada */}
       <header className="bg-[#0c3f6a] text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">SISC-SESAU</h1>
           <a
-            href="/api/auth/signin?callbackUrl=/dashboard"
+            href="/dashboard"
             className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
           >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.325 19.611c-1.445.777-3.144 1.223-4.98 1.223-4.042 0-7.345-3.303-7.345-7.345 0-4.041 3.303-7.344 7.345-7.344 1.836 0 3.535.446 4.98 1.223l-2.04 2.04c-.775-.447-1.703-.71-2.688-.71-2.848 0-5.172 2.324-5.172 5.172 0 2.848 2.324 5.172 5.172 5.172.985 0 1.913-.263 2.688-.71l2.04 2.04z"/>
-            </svg>
-            Login
+            Acessar Sistema
           </a>
         </div>
       </header>
 
-      {/* Conteúdo Principal: Chat Ativo */}
+      {/* Conteúdo Principal - APRESENTAÇÃO DO SISTEMA */}
       <main className="container mx-auto px-4 py-8 flex-grow">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-            Sistema interno de Informação
-          </h2>
-          <p className="text-gray-600 mb-8 text-center">
-            Chat público para comunicação interna.
-          </p>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              Sistema Interno de Informação da Saúde Coletiva
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Plataforma administrativa da Secretaria Municipal de Saúde de Araruama
+            </p>
+          </div>
 
-          {/* Container do Chat */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg shadow-sm p-6 h-[500px] flex flex-col">
-            
-            {/* Área de Mensagens (AGORA DINÂMICA) */}
-            <div className="flex-grow overflow-y-auto mb-4 p-3 bg-white rounded border">
-              {isLoading ? (
-                // Estado de Carregamento
-                <div className="text-center text-gray-500 py-10">
-                  <p>Carregando mensagens...</p>
-                </div>
-              ) : messages.length === 0 ? (
-                // Estado Vazio
-                <div className="text-center text-gray-500 py-10">
-                  <p>Nenhuma mensagem ainda. Seja o primeiro a escrever!</p>
-                </div>
-              ) : (
-                // Lista de Mensagens
-                <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className="mb-3">
-                      <div className="inline-block bg-blue-50 text-gray-800 rounded-lg px-4 py-2 max-w-xs md:max-w-md">
-                        <p>{msg.text}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            day: '2-digit',
-                            month: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Formulário para Enviar Nova Mensagem */}
-            <div className="border-t pt-4">
-              <form onSubmit={handleSubmit} className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Digite sua mensagem pública aqui..."
-                  className="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  disabled={isSending}
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#0c3f6a] text-white font-medium rounded-lg hover:bg-[#0a3559] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSending || !newMessage.trim()}
-                >
-                  {isSending ? 'Enviando...' : 'Enviar'}
-                </button>
-              </form>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                As mensagens são públicas e aparecerão para todos.
+          {/* Grid de Funcionalidades */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="text-blue-800 mb-4">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-blue-800 mb-2">Cadastro de Pacientes</h3>
+              <p className="text-blue-600">
+                Gerencie o cadastro único de pacientes do município com histórico completo.
               </p>
             </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+              <div className="text-green-800 mb-4">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-green-800 mb-2">Agendamentos</h3>
+              <p className="text-green-600">
+                Controle de consultas, exames e procedimentos em todas as unidades.
+              </p>
+            </div>
+
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+              <div className="text-purple-800 mb-4">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-purple-800 mb-2">Relatórios</h3>
+              <p className="text-purple-600">
+                Acesse relatórios detalhados e indicadores de saúde para tomada de decisão.
+              </p>
+            </div>
+          </div>
+
+          {/* Chamada para ação */}
+          <div className="text-center bg-gray-50 rounded-2xl p-12">
+            <h3 className="text-3xl font-bold text-gray-800 mb-4">
+              Pronto para gerenciar a saúde do município?
+            </h3>
+            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+              Acesse o sistema interno para começar a utilizar as ferramentas de gestão da saúde coletiva.
+            </p>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center px-8 py-4 text-lg font-medium rounded-lg text-white bg-[#0c3f6a] hover:bg-[#0a3559] transition-colors"
+            >
+              Acessar Dashboard
+              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
           </div>
         </div>
       </main>
 
-      {/* Rodapé (inalterado) */}
-      <footer className="mt-16 border-t border-gray-200 py-6 bg-gray-50">
-        <div className="container mx-auto px-4 text-center text-gray-700">
-          <p>
-            <strong>SISC-SESAU - Sistema interno de Informação</strong> © {new Date().getFullYear()} - Todos os direitos reservados.
-          </p>
-          <p className="mt-1">
-            Desenvolvido por: Enf° Rodrigo Bruno.
-          </p>
+      {/* Rodapé atualizado */}
+      <footer className="mt-16 border-t border-gray-200 py-8 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <p className="text-gray-700 font-bold">
+                SISC-SESAU - Sistema Interno de Informação
+              </p>
+              <p className="text-gray-600 text-sm">
+                © {new Date().getFullYear()} - Todos os direitos reservados.
+              </p>
+            </div>
+            <div className="text-gray-600">
+              <p>Desenvolvido por: Enf° Rodrigo Bruno.</p>
+              <p className="text-sm mt-1">Secretaria Municipal de Saúde de Araruama</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

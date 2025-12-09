@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SISC - Sistema de Informação',
-  description: 'Sistema interno da Saúde Coletiva',
+  title: 'SISC-SESAU - Sistema de Informação da Saúde Coletiva',
+  description: 'Sistema interno da Secretaria Municipal de Saúde de Araruama',
 }
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.className} bg-white`}>
+      <body className={`${inter.className} bg-gray-50`}>
         {children}
       </body>
     </html>

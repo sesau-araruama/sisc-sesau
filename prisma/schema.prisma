@@ -47,3 +47,10 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ✅ ADICIONE ESTE MODELO PARA O CHAT
+model Message {
+  id        String   @id @default(cuid())
+  text      String   // Conteúdo da mensagem
+  createdAt DateTime @default(now()) // Data/hora automática
+}

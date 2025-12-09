@@ -1,15 +1,4 @@
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "../api/auth/[...nextauth]/route"
-import { redirect } from "next/navigation"
-
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
-
-  // Se não estiver logado, redireciona para a home
-  if (!session) {
-    redirect("/")
-  }
-
+export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
@@ -19,14 +8,13 @@ export default async function DashboardPage() {
           </h1>
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Bem-vindo(a), <span className="text-blue-600">{session.user?.name}!</span>
+              Bem-vindo(a) ao Sistema Interno de Informação
             </h2>
             <p className="text-gray-600 mb-6">
-              Email: {session.user?.email}
+              Selecione uma das funcionalidades abaixo para começar.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Cards de funcionalidades do sistema */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
                 <h3 className="font-semibold text-blue-800 mb-2">👥 Pacientes</h3>
                 <p className="text-blue-600 text-sm">Gerencie o cadastro de pacientes</p>
@@ -54,10 +42,10 @@ export default async function DashboardPage() {
             
             <div className="mt-8 pt-6 border-t">
               <a 
-                href="/api/auth/signout" 
-                className="text-red-600 hover:text-red-800 font-medium"
+                href="/" 
+                className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                Sair do sistema →
+                ← Voltar para a página inicial
               </a>
             </div>
           </div>

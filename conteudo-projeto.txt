@@ -1,0 +1,773 @@
+﻿===============================================================
+CONTEÚDO DO PROJETO - SISC-SESAU
+Data da coleta: 09/12/2025 10:18:45
+Diretório: C:\Users\Usuario\Documents\Códigos\sistema-interno-araruama
+===============================================================
+
+================================================================================
+ARQUIVO: package.json
+================================================================================
+
+{
+  "name": "sistema-interno-araruama",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/client": "6.19.0",
+    "bcrypt": "^6.0.0",
+    "googleapis": "^166.0.0",
+    "next": "^16.0.7",
+    "next-auth": "^4.24.13",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.6",
+    "prisma": "6.19.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+
+================================================================================
+ARQUIVO: app\layout.tsx
+================================================================================
+
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  title: 'SISC - Sistema de InformaÃ§Ã£o',
+  description: 'Sistema interno da SaÃºde Coletiva',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="pt-BR">
+      <body className={`${inter.className} bg-white`}>
+        {children}
+      </body>
+    </html>
+  )
+}
+
+================================================================================
+ARQUIVO: app\globals.css
+================================================================================
+
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+================================================================================
+ARQUIVO: app\page.tsx
+================================================================================
+
+'use client' // ðŸ‘ˆ Isso Ã© ESSENCIAL: transforma o componente em "Client Component"
+
+import { useState, useEffect, FormEvent } from 'react'
+
+// Define a "forma" (tipo) de uma mensagem que vem da nossa API
+interface ChatMessage {
+  id: string
+  text: string
+  createdAt: string // A API envia como string, depois convertemos para Date se precisar
+}
+
+export default function Home() {
+  // 1. ESTADOS (VARIÃVEIS REATIVAS) DO COMPONENTE
+  const [messages, setMessages] = useState<ChatMessage[]>([]) // Lista de mensagens
+  const [newMessage, setNewMessage] = useState('') // Texto digitado no input
+  const [isLoading, setIsLoading] = useState(false) // Controla o "carregando..."
+  const [isSending, setIsSending] = useState(false) // Controla o "enviando..."
+
+  // 2. FUNÃ‡ÃƒO: Buscar o histÃ³rico de mensagens da nossa API
+  const fetchMessages = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/chat/messages') // Chama a rota GET
+      if (!response.ok) throw new Error('Falha ao carregar mensagens')
+      const data = await response.json()
+      setMessages(data) // Atualiza o estado com as mensagens recebidas
+    } catch (error) {
+      console.error('Erro ao buscar mensagens:', error)
+      alert('NÃ£o foi possÃ­vel carregar o chat. Tente recarregar a pÃ¡gina.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 3. FUNÃ‡ÃƒO: Enviar uma nova mensagem para a nossa API
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault() // Impede o recarregamento padrÃ£o do formulÃ¡rio
+    if (!newMessage.trim() || isSending) return // NÃ£o envia se estiver vazio ou jÃ¡ enviando
+
+    const messageToSend = newMessage.trim()
+    setIsSending(true)
+
+    try {
+      const response = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: messageToSend }),
+      })
+
+      if (!response.ok) throw new Error('Falha ao enviar mensagem')
+
+      // Limpa o campo de input e busca as mensagens atualizadas
+      setNewMessage('')
+      await fetchMessages() // Recarrega a lista com a nova mensagem
+
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error)
+      alert('Erro ao enviar mensagem. Tente novamente.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // 4. EFEITO: Buscar mensagens quando a pÃ¡gina for carregada
+  useEffect(() => {
+    fetchMessages()
+  }, [])
+
+  // 5. RENDERIZAÃ‡ÃƒO DA INTERFACE
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Barra superior (inalterada) */}
+      <header className="bg-[#0c3f6a] text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold">SISC-SESAU</h1>
+          <a
+            href="/api/auth/signin?callbackUrl=/dashboard"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
+          >
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.325 19.611c-1.445.777-3.144 1.223-4.98 1.223-4.042 0-7.345-3.303-7.345-7.345 0-4.041 3.303-7.344 7.345-7.344 1.836 0 3.535.446 4.98 1.223l-2.04 2.04c-.775-.447-1.703-.71-2.688-.71-2.848 0-5.172 2.324-5.172 5.172 0 2.848 2.324 5.172 5.172 5.172.985 0 1.913-.263 2.688-.71l2.04 2.04z"/>
+            </svg>
+            Login
+          </a>
+        </div>
+      </header>
+
+      {/* ConteÃºdo Principal: Chat Ativo */}
+      <main className="container mx-auto px-4 py-8 flex-grow">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
+            Sistema interno de InformaÃ§Ã£o
+          </h2>
+          <p className="text-gray-600 mb-8 text-center">
+            Chat pÃºblico para comunicaÃ§Ã£o interna.
+          </p>
+
+          {/* Container do Chat */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg shadow-sm p-6 h-[500px] flex flex-col">
+            
+            {/* Ãrea de Mensagens (AGORA DINÃ‚MICA) */}
+            <div className="flex-grow overflow-y-auto mb-4 p-3 bg-white rounded border">
+              {isLoading ? (
+                // Estado de Carregamento
+                <div className="text-center text-gray-500 py-10">
+                  <p>Carregando mensagens...</p>
+                </div>
+              ) : messages.length === 0 ? (
+                // Estado Vazio
+                <div className="text-center text-gray-500 py-10">
+                  <p>Nenhuma mensagem ainda. Seja o primeiro a escrever!</p>
+                </div>
+              ) : (
+                // Lista de Mensagens
+                <div className="space-y-3">
+                  {messages.map((msg) => (
+                    <div key={msg.id} className="mb-3">
+                      <div className="inline-block bg-blue-50 text-gray-800 rounded-lg px-4 py-2 max-w-xs md:max-w-md">
+                        <p>{msg.text}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* FormulÃ¡rio para Enviar Nova Mensagem */}
+            <div className="border-t pt-4">
+              <form onSubmit={handleSubmit} className="flex space-x-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Digite sua mensagem pÃºblica aqui..."
+                  className="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  disabled={isSending}
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-[#0c3f6a] text-white font-medium rounded-lg hover:bg-[#0a3559] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSending || !newMessage.trim()}
+                >
+                  {isSending ? 'Enviando...' : 'Enviar'}
+                </button>
+              </form>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                As mensagens sÃ£o pÃºblicas e aparecerÃ£o para todos.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* RodapÃ© (inalterado) */}
+      <footer className="mt-16 border-t border-gray-200 py-6 bg-gray-50">
+        <div className="container mx-auto px-4 text-center text-gray-700">
+          <p>
+            <strong>SISC-SESAU - Sistema interno de InformaÃ§Ã£o</strong> Â© {new Date().getFullYear()} - Todos os direitos reservados.
+          </p>
+          <p className="mt-1">
+            Desenvolvido por: EnfÂ° Rodrigo Bruno.
+          </p>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+================================================================================
+ARQUIVO: app\dashboard\page.tsx
+================================================================================
+
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "../api/auth/[...nextauth]/route"
+import { redirect } from "next/navigation"
+
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions)
+
+  // Se nÃ£o estiver logado, redireciona para a home
+  if (!session) {
+    redirect("/")
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white shadow-lg rounded-xl p-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            Dashboard do Sistema de SaÃºde
+          </h1>
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+              Bem-vindo(a), <span className="text-blue-600">{session.user?.name}!</span>
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Email: {session.user?.email}
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Cards de funcionalidades do sistema */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                <h3 className="font-semibold text-blue-800 mb-2">ðŸ‘¥ Pacientes</h3>
+                <p className="text-blue-600 text-sm">Gerencie o cadastro de pacientes</p>
+                <button className="mt-3 text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Acessar
+                </button>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-5">
+                <h3 className="font-semibold text-green-800 mb-2">ðŸ“… Agendamentos</h3>
+                <p className="text-green-600 text-sm">Visualize e crie novos agendamentos</p>
+                <button className="mt-3 text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                  Acessar
+                </button>
+              </div>
+              
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-5">
+                <h3 className="font-semibold text-purple-800 mb-2">ðŸ“Š RelatÃ³rios</h3>
+                <p className="text-purple-600 text-sm">Acesse relatÃ³rios e estatÃ­sticas</p>
+                <button className="mt-3 text-sm bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                  Acessar
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t">
+              <a 
+                href="/api/auth/signout" 
+                className="text-red-600 hover:text-red-800 font-medium"
+              >
+                Sair do sistema â†’
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+================================================================================
+ARQUIVO: app\api\auth\[...nextauth]\route.ts
+================================================================================
+
+ARQUIVO NÃO ENCONTRADO
+
+
+================================================================================
+ARQUIVO: next.config.ts
+================================================================================
+
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+
+
+================================================================================
+ARQUIVO: tsconfig.json
+================================================================================
+
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+
+
+================================================================================
+LISTA COMPLETA DE ARQUIVOS NO PROJETO
+================================================================================
+
+.env
+.gitignore
+eslint.config.mjs
+next-env.d.ts
+next.config.ts
+package-lock.json
+package.json
+postcss.config.mjs
+README.md
+tsconfig.json
+.next\dev\build-manifest.json
+.next\dev\fallback-build-manifest.json
+.next\dev\package.json
+.next\dev\prerender-manifest.json
+.next\dev\routes-manifest.json
+.next\dev\trace
+.next\dev\build\package.json
+.next\dev\build\postcss.js
+.next\dev\build\postcss.js.map
+.next\dev\build\chunks\node_modules_fe693df6._.js
+.next\dev\build\chunks\node_modules_fe693df6._.js.map
+.next\dev\build\chunks\[root-of-the-server]__51225daf._.js
+.next\dev\build\chunks\[root-of-the-server]__51225daf._.js.map
+.next\dev\build\chunks\[root-of-the-server]__974941ed._.js
+.next\dev\build\chunks\[root-of-the-server]__974941ed._.js.map
+.next\dev\build\chunks\[turbopack-node]_transforms_postcss_ts_7180740f._.js
+.next\dev\build\chunks\[turbopack-node]_transforms_postcss_ts_7180740f._.js.map
+.next\dev\build\chunks\[turbopack]_runtime.js
+.next\dev\build\chunks\[turbopack]_runtime.js.map
+.next\dev\cache\.rscinfo
+.next\dev\cache\next-devtools-config.json
+.next\dev\logs\next-development.log
+.next\dev\server\app-paths-manifest.json
+.next\dev\server\interception-route-rewrite-manifest.js
+.next\dev\server\middleware-build-manifest.js
+.next\dev\server\middleware-manifest.json
+.next\dev\server\next-font-manifest.js
+.next\dev\server\next-font-manifest.json
+.next\dev\server\pages-manifest.json
+.next\dev\server\server-reference-manifest.js
+.next\dev\server\server-reference-manifest.json
+.next\dev\server\app\page.js
+.next\dev\server\app\page.js.map
+.next\dev\server\app\page_client-reference-manifest.js
+.next\dev\server\app\api\auth\[...nextauth]\route.js
+.next\dev\server\app\api\auth\[...nextauth]\route.js.map
+.next\dev\server\app\api\auth\[...nextauth]\route_client-reference-manifest.js
+.next\dev\server\app\api\auth\[...nextauth]\route\app-paths-manifest.json
+.next\dev\server\app\api\auth\[...nextauth]\route\build-manifest.json
+.next\dev\server\app\api\auth\[...nextauth]\route\server-reference-manifest.json
+.next\dev\server\app\api\chat\messages\route.js
+.next\dev\server\app\api\chat\messages\route.js.map
+.next\dev\server\app\api\chat\messages\route_client-reference-manifest.js
+.next\dev\server\app\api\chat\messages\route\app-paths-manifest.json
+.next\dev\server\app\api\chat\messages\route\build-manifest.json
+.next\dev\server\app\api\chat\messages\route\server-reference-manifest.json
+.next\dev\server\app\dashboard\page.js
+.next\dev\server\app\dashboard\page.js.map
+.next\dev\server\app\dashboard\page_client-reference-manifest.js
+.next\dev\server\app\dashboard\page\app-paths-manifest.json
+.next\dev\server\app\dashboard\page\build-manifest.json
+.next\dev\server\app\dashboard\page\next-font-manifest.json
+.next\dev\server\app\dashboard\page\react-loadable-manifest.json
+.next\dev\server\app\dashboard\page\server-reference-manifest.json
+.next\dev\server\app\page\app-paths-manifest.json
+.next\dev\server\app\page\build-manifest.json
+.next\dev\server\app\page\next-font-manifest.json
+.next\dev\server\app\page\react-loadable-manifest.json
+.next\dev\server\app\page\server-reference-manifest.json
+.next\dev\server\app\_not-found\page.js
+.next\dev\server\app\_not-found\page.js.map
+.next\dev\server\app\_not-found\page_client-reference-manifest.js
+.next\dev\server\app\_not-found\page\app-paths-manifest.json
+.next\dev\server\app\_not-found\page\build-manifest.json
+.next\dev\server\app\_not-found\page\next-font-manifest.json
+.next\dev\server\app\_not-found\page\react-loadable-manifest.json
+.next\dev\server\app\_not-found\page\server-reference-manifest.json
+.next\dev\server\chunks\node_modules_dd5b04d8._.js
+.next\dev\server\chunks\node_modules_dd5b04d8._.js.map
+.next\dev\server\chunks\node_modules_jose_dist_node_cjs_bd88468e._.js
+.next\dev\server\chunks\node_modules_jose_dist_node_cjs_bd88468e._.js.map
+.next\dev\server\chunks\node_modules_next-auth_ff6d33bd._.js
+.next\dev\server\chunks\node_modules_next-auth_ff6d33bd._.js.map
+.next\dev\server\chunks\node_modules_next_68398699._.js
+.next\dev\server\chunks\node_modules_next_68398699._.js.map
+.next\dev\server\chunks\node_modules_next_dist_95a3fe04._.js
+.next\dev\server\chunks\node_modules_next_dist_95a3fe04._.js.map
+.next\dev\server\chunks\node_modules_next_f977eb13._.js
+.next\dev\server\chunks\node_modules_next_f977eb13._.js.map
+.next\dev\server\chunks\node_modules_openid-client_d15f72b3._.js
+.next\dev\server\chunks\node_modules_openid-client_d15f72b3._.js.map
+.next\dev\server\chunks\[root-of-the-server]__0cc7d3d8._.js
+.next\dev\server\chunks\[root-of-the-server]__0cc7d3d8._.js.map
+.next\dev\server\chunks\[root-of-the-server]__ba31fab3._.js
+.next\dev\server\chunks\[root-of-the-server]__ba31fab3._.js.map
+.next\dev\server\chunks\[root-of-the-server]__d6ae5bf5._.js
+.next\dev\server\chunks\[root-of-the-server]__d6ae5bf5._.js.map
+.next\dev\server\chunks\[turbopack]_runtime.js
+.next\dev\server\chunks\[turbopack]_runtime.js.map
+.next\dev\server\chunks\_next-internal_server_app_api_auth_[___nextauth]_route_actions_1c865db8.js
+.next\dev\server\chunks\_next-internal_server_app_api_auth_[___nextauth]_route_actions_1c865db8.js.map
+.next\dev\server\chunks\_next-internal_server_app_api_chat_messages_route_actions_3f28e3ca.js
+.next\dev\server\chunks\_next-internal_server_app_api_chat_messages_route_actions_3f28e3ca.js.map
+.next\dev\server\chunks\ssr\app_b9b1292a._.js
+.next\dev\server\chunks\ssr\app_b9b1292a._.js.map
+.next\dev\server\chunks\ssr\node_modules_186c80ea._.js
+.next\dev\server\chunks\ssr\node_modules_186c80ea._.js.map
+.next\dev\server\chunks\ssr\node_modules_1af80370._.js
+.next\dev\server\chunks\ssr\node_modules_1af80370._.js.map
+.next\dev\server\chunks\ssr\node_modules_314a9f88._.js
+.next\dev\server\chunks\ssr\node_modules_314a9f88._.js.map
+.next\dev\server\chunks\ssr\node_modules_43e8465e._.js
+.next\dev\server\chunks\ssr\node_modules_43e8465e._.js.map
+.next\dev\server\chunks\ssr\node_modules_473cc24e._.js
+.next\dev\server\chunks\ssr\node_modules_473cc24e._.js.map
+.next\dev\server\chunks\ssr\node_modules_be4d7e34._.js
+.next\dev\server\chunks\ssr\node_modules_be4d7e34._.js.map
+.next\dev\server\chunks\ssr\node_modules_c69ae102._.js
+.next\dev\server\chunks\ssr\node_modules_c69ae102._.js.map
+.next\dev\server\chunks\ssr\node_modules_e6f2a25f._.js
+.next\dev\server\chunks\ssr\node_modules_e6f2a25f._.js.map
+.next\dev\server\chunks\ssr\node_modules_jose_dist_node_cjs_6d3869c7._.js
+.next\dev\server\chunks\ssr\node_modules_jose_dist_node_cjs_6d3869c7._.js.map
+.next\dev\server\chunks\ssr\node_modules_next-auth_54d032b9._.js
+.next\dev\server\chunks\ssr\node_modules_next-auth_54d032b9._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_01f58d87._.js
+.next\dev\server\chunks\ssr\node_modules_next_01f58d87._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_25c98ed0._.js
+.next\dev\server\chunks\ssr\node_modules_next_25c98ed0._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_5a156b62._.js
+.next\dev\server\chunks\ssr\node_modules_next_5a156b62._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_2eb74c46._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_2eb74c46._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_2f87da1c._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_2f87da1c._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_32ba5e06._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_32ba5e06._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_3a203ced._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_3a203ced._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_3b4d20e1._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_3b4d20e1._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_b1b68814._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_b1b68814._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_9774470f._.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_9774470f._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_forbidden_45780354.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_forbidden_45780354.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_global-error_ece394eb.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_global-error_ece394eb.js.map
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_unauthorized_15817684.js
+.next\dev\server\chunks\ssr\node_modules_next_dist_client_components_builtin_unauthorized_15817684.js.map
+.next\dev\server\chunks\ssr\node_modules_next_f2b80a75._.js
+.next\dev\server\chunks\ssr\node_modules_next_f2b80a75._.js.map
+.next\dev\server\chunks\ssr\node_modules_next_f71b9665._.js
+.next\dev\server\chunks\ssr\node_modules_next_f71b9665._.js.map
+.next\dev\server\chunks\ssr\node_modules_openid-client_5e2b25d2._.js
+.next\dev\server\chunks\ssr\node_modules_openid-client_5e2b25d2._.js.map
+.next\dev\server\chunks\ssr\[externals]_next_dist_compiled_next-server_app-page-turbo_runtime_dev_062c5159.js
+.next\dev\server\chunks\ssr\[externals]_next_dist_compiled_next-server_app-page-turbo_runtime_dev_062c5159.js.map
+.next\dev\server\chunks\ssr\[externals]_next_dist_shared_lib_no-fallback-error_external_59b92b38.js
+.next\dev\server\chunks\ssr\[externals]_next_dist_shared_lib_no-fallback-error_external_59b92b38.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__1222724e._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__1222724e._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__1aaf5479._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__1aaf5479._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__31c4daa8._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__31c4daa8._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__5613dbb4._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__5613dbb4._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__70a73b34._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__70a73b34._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__73ae023d._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__73ae023d._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__7f148858._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__7f148858._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__a7cbe145._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__a7cbe145._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__a8ab9a0d._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__a8ab9a0d._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__b6902a0f._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__b6902a0f._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__b771a782._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__b771a782._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__b78e9577._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__b78e9577._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__c00258c2._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__c00258c2._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__c80f7c8f._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__c80f7c8f._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__e6a4d965._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__e6a4d965._.js.map
+.next\dev\server\chunks\ssr\[root-of-the-server]__e8a2741f._.js
+.next\dev\server\chunks\ssr\[root-of-the-server]__e8a2741f._.js.map
+.next\dev\server\chunks\ssr\[turbopack]_runtime.js
+.next\dev\server\chunks\ssr\[turbopack]_runtime.js.map
+.next\dev\server\chunks\ssr\_next-internal_server_app_dashboard_page_actions_7f01ccec.js
+.next\dev\server\chunks\ssr\_next-internal_server_app_dashboard_page_actions_7f01ccec.js.map
+.next\dev\server\chunks\ssr\_next-internal_server_app_page_actions_39d4fc33.js
+.next\dev\server\chunks\ssr\_next-internal_server_app_page_actions_39d4fc33.js.map
+.next\dev\server\chunks\ssr\_next-internal_server_app__not-found_page_actions_554ec2bf.js
+.next\dev\server\chunks\ssr\_next-internal_server_app__not-found_page_actions_554ec2bf.js.map
+.next\dev\server\pages\_app.js
+.next\dev\server\pages\_app.js.map
+.next\dev\server\pages\_document.js
+.next\dev\server\pages\_document.js.map
+.next\dev\server\pages\_error.js
+.next\dev\server\pages\_error.js.map
+.next\dev\server\pages\_app\build-manifest.json
+.next\dev\server\pages\_app\client-build-manifest.json
+.next\dev\server\pages\_app\next-font-manifest.json
+.next\dev\server\pages\_app\pages-manifest.json
+.next\dev\server\pages\_app\react-loadable-manifest.json
+.next\dev\server\pages\_document\next-font-manifest.json
+.next\dev\server\pages\_document\pages-manifest.json
+.next\dev\server\pages\_document\react-loadable-manifest.json
+.next\dev\server\pages\_error\build-manifest.json
+.next\dev\server\pages\_error\client-build-manifest.json
+.next\dev\server\pages\_error\next-font-manifest.json
+.next\dev\server\pages\_error\pages-manifest.json
+.next\dev\server\pages\_error\react-loadable-manifest.json
+.next\dev\static\chunks\app_favicon_ico_mjs_756560dc._.js
+.next\dev\static\chunks\app_globals_css_bad6b30c._.single.css
+.next\dev\static\chunks\app_globals_css_bad6b30c._.single.css.map
+.next\dev\static\chunks\app_layout_tsx_78cdd4a3._.js
+.next\dev\static\chunks\app_page_tsx_30bfc409._.js
+.next\dev\static\chunks\app_page_tsx_607b5035._.js
+.next\dev\static\chunks\node_modules_7f09fef0._.js
+.next\dev\static\chunks\node_modules_7f09fef0._.js.map
+.next\dev\static\chunks\node_modules_@swc_helpers_cjs_d80fb378._.js
+.next\dev\static\chunks\node_modules_@swc_helpers_cjs_d80fb378._.js.map
+.next\dev\static\chunks\node_modules_next_app_72f3d36f.js
+.next\dev\static\chunks\node_modules_next_app_72f3d36f.js.map
+.next\dev\static\chunks\node_modules_next_dist_094231d7._.js
+.next\dev\static\chunks\node_modules_next_dist_094231d7._.js.map
+.next\dev\static\chunks\node_modules_next_dist_19fd0646._.js
+.next\dev\static\chunks\node_modules_next_dist_19fd0646._.js.map
+.next\dev\static\chunks\node_modules_next_dist_2c670af9._.js
+.next\dev\static\chunks\node_modules_next_dist_2c670af9._.js.map
+.next\dev\static\chunks\node_modules_next_dist_7a8122d0._.js
+.next\dev\static\chunks\node_modules_next_dist_7a8122d0._.js.map
+.next\dev\static\chunks\node_modules_next_dist_b0a279d5._.js
+.next\dev\static\chunks\node_modules_next_dist_b0a279d5._.js.map
+.next\dev\static\chunks\node_modules_next_dist_build_polyfills_polyfill-nomodule.js
+.next\dev\static\chunks\node_modules_next_dist_client_aaee43fe._.js
+.next\dev\static\chunks\node_modules_next_dist_client_aaee43fe._.js.map
+.next\dev\static\chunks\node_modules_next_dist_client_components_builtin_global-error_78cdd4a3.js
+.next\dev\static\chunks\node_modules_next_dist_client_d0aa886c._.js
+.next\dev\static\chunks\node_modules_next_dist_client_d0aa886c._.js.map
+.next\dev\static\chunks\node_modules_next_dist_compiled_8ca6b690._.js
+.next\dev\static\chunks\node_modules_next_dist_compiled_8ca6b690._.js.map
+.next\dev\static\chunks\node_modules_next_dist_compiled_a0e4c7b4._.js
+.next\dev\static\chunks\node_modules_next_dist_compiled_a0e4c7b4._.js.map
+.next\dev\static\chunks\node_modules_next_dist_compiled_next-devtools_index_1dd7fb59.js
+.next\dev\static\chunks\node_modules_next_dist_compiled_next-devtools_index_1dd7fb59.js.map
+.next\dev\static\chunks\node_modules_next_dist_compiled_react-dom_1e674e59._.js
+.next\dev\static\chunks\node_modules_next_dist_compiled_react-dom_1e674e59._.js.map
+.next\dev\static\chunks\node_modules_next_dist_compiled_react-server-dom-turbopack_9212ccad._.js
+.next\dev\static\chunks\node_modules_next_dist_compiled_react-server-dom-turbopack_9212ccad._.js.map
+.next\dev\static\chunks\node_modules_next_dist_shared_lib_82dc2e9d._.js
+.next\dev\static\chunks\node_modules_next_dist_shared_lib_82dc2e9d._.js.map
+.next\dev\static\chunks\node_modules_next_dist_shared_lib_cf5b50a6._.js
+.next\dev\static\chunks\node_modules_next_dist_shared_lib_cf5b50a6._.js.map
+.next\dev\static\chunks\node_modules_next_error_1cfbb379.js
+.next\dev\static\chunks\node_modules_next_error_1cfbb379.js.map
+.next\dev\static\chunks\node_modules_react-dom_4411d9bd._.js
+.next\dev\static\chunks\node_modules_react-dom_4411d9bd._.js.map
+.next\dev\static\chunks\pages__app_2da965e7._.js
+.next\dev\static\chunks\pages__app_5d693f93._.js.map
+.next\dev\static\chunks\pages__error_2da965e7._.js
+.next\dev\static\chunks\pages__error_9f8f7792._.js.map
+.next\dev\static\chunks\turbopack-pages__app_5d693f93._.js
+.next\dev\static\chunks\turbopack-pages__error_9f8f7792._.js
+.next\dev\static\chunks\turbopack-_45210fd5._.js
+.next\dev\static\chunks\[next]_entry_page-loader_ts_43b523b5._.js
+.next\dev\static\chunks\[next]_entry_page-loader_ts_43b523b5._.js.map
+.next\dev\static\chunks\[next]_entry_page-loader_ts_742e4b53._.js
+.next\dev\static\chunks\[next]_entry_page-loader_ts_742e4b53._.js.map
+.next\dev\static\chunks\[next]_internal_font_google_geist_a71539c9_module_css_bad6b30c._.single.css
+.next\dev\static\chunks\[next]_internal_font_google_geist_a71539c9_module_css_bad6b30c._.single.css.map
+.next\dev\static\chunks\[next]_internal_font_google_geist_mono_8d43a2aa_module_css_bad6b30c._.single.css
+.next\dev\static\chunks\[next]_internal_font_google_geist_mono_8d43a2aa_module_css_bad6b30c._.single.css.map
+.next\dev\static\chunks\[next]_internal_font_google_inter_5972bc34_module_css_bad6b30c._.single.css
+.next\dev\static\chunks\[next]_internal_font_google_inter_5972bc34_module_css_bad6b30c._.single.css.map
+.next\dev\static\chunks\[root-of-the-server]__092393de._.js
+.next\dev\static\chunks\[root-of-the-server]__092393de._.js.map
+.next\dev\static\chunks\[root-of-the-server]__28bc9c2a._.css
+.next\dev\static\chunks\[root-of-the-server]__28bc9c2a._.css.map
+.next\dev\static\chunks\[root-of-the-server]__36b083e1._.css
+.next\dev\static\chunks\[root-of-the-server]__36b083e1._.css.map
+.next\dev\static\chunks\[root-of-the-server]__45f039c3._.js
+.next\dev\static\chunks\[root-of-the-server]__45f039c3._.js.map
+.next\dev\static\chunks\[turbopack]_browser_dev_hmr-client_hmr-client_ts_bae88007._.js
+.next\dev\static\chunks\[turbopack]_browser_dev_hmr-client_hmr-client_ts_bae88007._.js.map
+.next\dev\static\chunks\[turbopack]_browser_dev_hmr-client_hmr-client_ts_c8c997ce._.js
+.next\dev\static\chunks\[turbopack]_browser_dev_hmr-client_hmr-client_ts_c8c997ce._.js.map
+.next\dev\static\chunks\[turbopack]_browser_dev_hmr-client_hmr-client_ts_f26f265a._.js
+.next\dev\static\chunks\_45210fd5._.js.map
+.next\dev\static\chunks\_a0ff3932._.js
+.next\dev\static\chunks\_a1b13bc1._.js
+.next\dev\static\chunks\_a1b13bc1._.js.map
+.next\dev\static\chunks\pages\_app.js
+.next\dev\static\chunks\pages\_error.js
+.next\dev\static\development\_buildManifest.js
+.next\dev\static\development\_clientMiddlewareManifest.json
+.next\dev\static\development\_ssgManifest.js
+.next\dev\static\media\1bffadaabf893a1e-s.7cd81963.woff2
+.next\dev\static\media\2bbe8d2671613f1f-s.76dcb0b2.woff2
+.next\dev\static\media\2c55a0e60120577a-s.2a48534a.woff2
+.next\dev\static\media\4fa387ec64143e14-s.c1fdd6c2.woff2
+.next\dev\static\media\5476f68d60460930-s.c995e352.woff2
+.next\dev\static\media\7178b3e590c64307-s.b97b3418.woff2
+.next\dev\static\media\797e433ab948586e-s.p.dbea232f.woff2
+.next\dev\static\media\83afe278b6a6bb3c-s.p.3a6ba036.woff2
+.next\dev\static\media\8a480f0b521d4e75-s.8e0177b5.woff2
+.next\dev\static\media\9c72aa0f40e4eef8-s.18a48cbc.woff2
+.next\dev\static\media\ad66f9afd8947f86-s.7a40eb73.woff2
+.next\dev\static\media\bbc41e54d2fcbd21-s.799d8ef8.woff2
+.next\dev\static\media\caa3a2e1cccd8315-s.p.853070df.woff2
+.next\dev\static\media\favicon.0b3bf435.ico
+.next\dev\static\media\favicon.1906548d.ico
+.next\dev\types\cache-life.d.ts
+.next\dev\types\routes.d.ts
+.next\dev\types\validator.ts
+.next\types\cache-life.d.ts
+.next\types\routes.d.ts
+.next\types\validator.ts
+app\favicon.ico
+app\favicon.ico.old
+app\favicon.png
+app\globals.css
+app\layout.tsx
+app\page.tsx
+app\page.tsx.old
+app\api\auth\[...nextauth]\route.ts
+app\api\auth\[...nextauth]\route.ts.old
+app\api\chat\messages\route.ts
+app\dashboard\page.tsx
+prisma\dev.db
+prisma\schema.prisma
+prisma\schema.prisma.old
+prisma\migrations\migration_lock.toml
+prisma\migrations\20251202124511_init\migration.sql
+prisma\migrations\20251202191844_add_message_model\migration.sql
+prisma\prisma\dev.db
+public\file.svg
+public\globe.svg
+public\next.svg
+public\vercel.svg
+public\window.svg
+
