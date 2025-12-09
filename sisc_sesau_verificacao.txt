@@ -1,0 +1,330 @@
+================================================================================
+RELATORIO DE VERIFICACAO - SISC-SESAU
+================================================================================
+Data da verificacao: 2025-12-09 14:18:52
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: package.json
+   Tamanho: 733 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: {
+     2:   "name": "sistema-interno-araruama",
+     3:   "version": "0.1.0",
+     4:   "private": true,
+     5:   "scripts": {
+     6:     "dev": "next dev",
+     7:     "build": "next build",
+     8:     "start": "next start",
+     9:     "lint": "eslint",
+    10:     "vercel-build": "prisma generate && next build"
+    11:   },
+    12:   "dependencies": {
+    13:     "@prisma/client": "6.19.0",
+    14:     "bcrypt": "^6.0.0",
+    15:     "jose": "^6.1.3",
+   ... (17 linhas omitidas)
+   [INFO] Prisma esta em dependencies (CORRETO)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: tsconfig.json
+   Tamanho: 666 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: {
+     2:   "compilerOptions": {
+     3:     "target": "ES2017",
+     4:     "lib": ["dom", "dom.iterable", "esnext"],
+     5:     "allowJs": true,
+     6:     "skipLibCheck": true,
+     7:     "strict": true,
+     8:     "noEmit": true,
+     9:     "esModuleInterop": true,
+    10:     "module": "esnext",
+    11:     "moduleResolution": "bundler",
+    12:     "resolveJsonModule": true,
+    13:     "isolatedModules": true,
+    14:     "jsx": "react-jsx",
+    15:     "incremental": true,
+   ... (20 linhas omitidas)
+   [INFO] Configuracao de paths esta correta
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: vercel.json
+   Tamanho: 137 bytes
+   Amostra (6 primeiras linhas):
+   ----------------------------------------
+     1: {
+     2:   "buildCommand": "npm run vercel-build",
+     3:   "devCommand": "next dev",
+     4:   "installCommand": "npm install",
+     5:   "framework": "nextjs"
+     6: }
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: prisma/schema.prisma
+   Tamanho: 2485 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: generator client {
+     2:   provider = "prisma-client-js"
+     3: }
+     4: 
+     5: datasource db {
+     6:   provider = "postgresql"
+     7:   url      = env("DATABASE_URL")
+     8: }
+     9: 
+    10: model User {
+    11:   id                  String    @id @default(cuid())
+    12:   email               String    @unique
+    13:   name                String
+    14:   password            String
+    15:   role                String    // "admin", "medico", "atendente"
+   ... (77 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: middleware.ts
+   Tamanho: 1975 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { NextResponse } from 'next/server';
+     2: import type { NextRequest } from 'next/server';
+     3: import { getSession } from '@/lib/auth';
+     4: 
+     5: export async function middleware(request: NextRequest) {
+     6:   const session = await getSession();
+     7:   const { pathname } = request.nextUrl;
+     8: 
+     9:   // Rotas públicas que não requerem autenticação
+    10:   const publicPaths = ['/', '/login', '/api/auth/login', '/api/auth/change-password'];
+    11:   
+    12:   // Verificar se é uma rota pública
+    13:   const isPublicPath = publicPaths.some(path => 
+    14:     pathname === path || pathname.startsWith(`${path}/`)
+    15:   );
+   ... (43 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/lib/auth.ts
+   Tamanho: 3725 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { cookies } from 'next/headers';
+     2: import { jwtVerify, SignJWT } from 'jose';
+     3: import { prisma } from './prisma';
+     4: 
+     5: const secretKey = process.env.SESSION_SECRET;
+     6: if (!secretKey) {
+     7:   throw new Error('SESSION_SECRET não configurada');
+     8: }
+     9: const encodedKey = new TextEncoder().encode(secretKey);
+    10: 
+    11: export interface SessionUser {
+    12:   id: string;
+    13:   email: string;
+    14:   name: string;
+    15:   role: string;
+   ... (132 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/lib/prisma.ts
+   Tamanho: 291 bytes
+   Amostra (9 primeiras linhas):
+   ----------------------------------------
+     1: import { PrismaClient } from '@prisma/client';
+     2: 
+     3: const globalForPrisma = globalThis as unknown as {
+     4:   prisma: PrismaClient | undefined;
+     5: };
+     6: 
+     7: export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+     8: 
+     9: if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/components/ForcePasswordChange.tsx
+   Tamanho: 9100 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: "use client";
+     2: 
+     3: import { useState } from 'react';
+     4: import { useRouter } from 'next/navigation';
+     5: 
+     6: interface ForcePasswordChangeProps {
+     7:   userEmail: string;
+     8: }
+     9: 
+    10: export default function ForcePasswordChange({ userEmail }: ForcePasswordChangeProps) {
+    11:   const router = useRouter();
+    12:   const [currentPassword, setCurrentPassword] = useState('');
+    13:   const [newPassword, setNewPassword] = useState('');
+    14:   const [confirmPassword, setConfirmPassword] = useState('');
+    15:   const [error, setError] = useState('');
+   ... (216 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/force-password-change/page.tsx
+   Tamanho: 2643 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { redirect } from 'next/navigation';
+     2: import { getSession } from '@/lib/auth';
+     3: import ForcePasswordChange from '@/components/ForcePasswordChange';
+     4: 
+     5: export default async function ForcePasswordChangePage() {
+     6:   const session = await getSession();
+     7:   
+     8:   // Se não estiver logado, redirecionar para login
+     9:   if (!session) {
+    10:     redirect('/login');
+    11:   }
+    12:   
+    13:   // Se já alterou a senha, redirecionar para dashboard
+    14:   if (!session.user.forcePasswordChange) {
+    15:     redirect('/dashboard');
+   ... (46 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/admin/usuarios/page.tsx
+   Tamanho: 2700 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { PrismaClient } from '@prisma/client';
+     2: import Link from 'next/link';
+     3: 
+     4: const prisma = new PrismaClient();
+     5: 
+     6: export default async function UsuariosPage() {
+     7:   // Somente admin pode acessar
+     8:   const session = await requireAuth('admin');
+     9:   
+    10:   const usuarios = await prisma.user.findMany({
+    11:     select: {
+    12:       id: true,
+    13:       email: true,
+    14:       name: true,
+    15:       role: true,
+   ... (65 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/api/auth/login/route.ts
+   Tamanho: 3589 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { NextRequest, NextResponse } from 'next/server';
+     2: import bcrypt from 'bcrypt';
+     3: import { prisma } from '@/lib/prisma';
+     4: import { createSession, logAudit } from '@/lib/auth';
+     5: 
+     6: export async function POST(request: NextRequest) {
+     7:   try {
+     8:     const { email, password } = await request.json();
+     9:     
+    10:     if (!email || !password) {
+    11:       return NextResponse.json(
+    12:         { error: 'Email e senha são obrigatórios' },
+    13:         { status: 400 }
+    14:       );
+    15:     }
+   ... (113 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/api/auth/change-password/route.ts
+   Tamanho: 2847 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { NextRequest, NextResponse } from 'next/server';
+     2: import bcrypt from 'bcrypt';
+     3: import { prisma } from '@/lib/prisma';
+     4: import { getSession } from '@/lib/auth';
+     5: 
+     6: export async function POST(request: NextRequest) {
+     7:   try {
+     8:     const { currentPassword, newPassword } = await request.json();
+     9:     const session = await getSession();
+    10:     
+    11:     if (!session) {
+    12:       return NextResponse.json(
+    13:         { error: 'Não autorizado' },
+    14:         { status: 401 }
+    15:       );
+   ... (90 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/login/page.tsx
+   Tamanho: 3486 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: 'use client';
+     2: 
+     3: import { useState } from 'react';
+     4: import { useRouter } from 'next/navigation';
+     5: 
+     6: export default function LoginPage() {
+     7:   const [email, setEmail] = useState('');
+     8:   const [password, setPassword] = useState('');
+     9:   const [error, setError] = useState('');
+    10:   const router = useRouter();
+    11: 
+    12:   const handleSubmit = async (e: React.FormEvent) => {
+    13:     e.preventDefault();
+    14:     setError('');
+    15: 
+   ... (79 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/dashboard/page.tsx
+   Tamanho: 873 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: import { getSession } from '@/app/lib/auth';
+     2: import LogoutButton from '@/app/components/LogoutButton';
+     3: 
+     4: export default async function DashboardPage() {
+     5:   const session = await getSession();
+     6:   
+     7:   if (!session) {
+     8:     return <div>Redirecionando para login...</div>;
+     9:   }
+    10: 
+    11:   return (
+    12:     <div className="p-8">
+    13:       <div className="flex justify-between items-center mb-8">
+    14:         <div>
+    15:           <h1 className="text-3xl font-bold">Dashboard SISC-SESAU</h1>
+   ... (14 linhas omitidas)
+
+--------------------------------------------------------------------------------
+[OK] ARQUIVO ENCONTRADO: app/page.tsx
+   Tamanho: 5564 bytes
+   Amostra (15 primeiras linhas):
+   ----------------------------------------
+     1: export default function Home() {
+     2:   return (
+     3:     <div className="min-h-screen bg-white flex flex-col">
+     4:       {/* Barra superior simplificada */}
+     5:       <header className="bg-[#0c3f6a] text-white p-4 shadow-md">
+     6:         <div className="container mx-auto flex justify-between items-center">
+     7:           <h1 className="text-xl font-bold">SISC-SESAU</h1>
+     8:           <a
+     9:             href="/dashboard"
+    10:             className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white ...
+    11:           >
+    12:             Acessar Sistema
+    13:           </a>
+    14:         </div>
+    15:       </header>
+   ... (95 linhas omitidas)
+
+================================================================================
+RESUMO:
+Total de arquivos verificados: 15
+[OK] Encontrados: 15
+[FALTANDO] Faltantes: 0
+Taxa de completude: 100.0%
+
+[SUCESSO] TODOS os arquivos essenciais estao presentes!
+   Voce pode prosseguir com o deploy no Vercel.
+================================================================================
