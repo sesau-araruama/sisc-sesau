@@ -8,49 +8,53 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  image         String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Para NextAuth
-  accounts      Account[]
-  sessions      Session[]
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ✅ ADICIONE ESTE MODELO PARA O CHAT
-model Message {
   id        String   @id @default(cuid())
-  text      String   // Conteúdo da mensagem
-  createdAt DateTime @default(now()) // Data/hora automática
+  email     String   @unique
+  name      String
+  password  String   // Hash da senha (NUNCA texto claro)
+  role      String   // "admin", "medico", "atendente"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Removido: image, emailVerified (não usaremos mais)
+  // Removido: accounts, sessions (do NextAuth)
+}
+
+// REMOVIDOS: modelos do NextAuth (Account e Session)
+// REMOVIDO: modelo Message (chat removido)
+
+// ✅ MODELO PACIENTE (próxima funcionalidade)
+model Patient {
+  id           String   @id @default(cuid())
+  name         String
+  cpf          String?  @unique
+  birthDate    DateTime?
+  gender       String?  // "M", "F", "Outro"
+  phone        String?
+  email        String?
+  address      String?
+  neighborhood String?
+  city         String   @default("Araruama")
+  zipCode      String?
+  susNumber    String?  @unique // Número do cartão SUS
+  medicalRecord String? // Prontuário médico
+  
+  // Contatos de emergência
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  
+  // Informações de saúde
+  allergies      String?
+  chronicDiseases String?
+  medications    String?
+  observations   String?
+  
+  // Controle interno
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?  // ID do usuário que cadastrou
+  
+  @@index([name])
+  @@index([cpf])
+  @@index([susNumber])
 }
